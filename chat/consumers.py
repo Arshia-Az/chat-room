@@ -1,6 +1,9 @@
 from channels.generic.websocket import WebsocketConsumer
 import json
 from asgiref.sync import async_to_sync
+from .serializers import MessageSerializer
+from .models import Message
+from rest_framework.renderers import JSONRenderer
 
 
 class ChatConsumer(WebsocketConsumer):
@@ -9,8 +12,19 @@ class ChatConsumer(WebsocketConsumer):
     def new_message(self, date):
         print(1111111)
 
-    def fetch_message(self):
-        pass
+    def fetch_message(self, data):
+        qs = Message.last_message(self)
+        message_json = self.message_serializer(qs)
+        content = {
+            'message': eval(message_json),
+        }
+        self.chat_message(content)
+
+
+    def message_serializer(self, qs):
+        serialized = MessageSerializer(qs, many=True)
+        content = JSONRenderer().render(serialized.data)
+        return content
 
 
     def connect(self):
@@ -38,11 +52,13 @@ class ChatConsumer(WebsocketConsumer):
 
     def receive(self, text_data):
         text_data_dict = json.loads(text_data)
-        message = text_data_dict['message']
+        message = text_data_dict.get('message', None)
         command = text_data_dict['command']
 
 
         self.commands[command](self, message)
+
+    def send_to_chat_message(self, message):
 
         async_to_sync(self.channel_layer.group_send)(
             self.room_group_name,
@@ -56,6 +72,7 @@ class ChatConsumer(WebsocketConsumer):
 
     def chat_message(self, event):
         message = event['message']
+        print(event)
         self.send(text_data=json.dumps({
             'message': message
         }))
