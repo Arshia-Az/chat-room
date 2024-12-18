@@ -1,1 +1,1 @@
-web: daphne -b 0.0.0.0 -p ${PORT} Djangochanel1.asgi:application
+web: daphne -p $PORT Djangochanel1.asgi:application
